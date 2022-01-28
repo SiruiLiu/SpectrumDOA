@@ -43,33 +43,43 @@ function [Frame] = SpectrumReadData(Path)
     DataCh12 = [];
     DataCh34 = [];
     DataCh56 = [];
+    DataCh78 = [];
     %共1200帧，6通道，每帧2通道，故每两通道为1200/(6/2)=400帧
     for i = 1:TotalFrame/(TotalCh/FrameCh)
         %通道1~2数据起始位置为第6DWORD,一个DWORD为4个short类型，故通道1起始位置为每帧第4*5+1=21个short数据。
         %根据FPGA方面反馈，IQ数据共占用500个DWORD，故通道1数据相对帧起始位置偏移500*4+21-1=2020个点，从协
         %议上也能看出。
-        %每两个通道按3帧循环，故每两个通道两组数据之间共间隔512DWOR*4*3=2048short*3=6144short个点的数据。
+        %每两个通道按4帧循环，故每两个通道两组数据之间共间隔512DWOR*4*4=2048short*4=8192short个点的数据。
         DataCh12 = [DataCh12;data1((i-1)*6144+21:(i-1)*6144+2020)];
         %通道2~3相对于通道1~2偏移512WORD*4=2048个short类型数据。
         DataCh34 = [DataCh34;data1((i-1)*6144+2048+21:(i-1)*6144+2048+2020)];
         DataCh56 = [DataCh56;data1((i-1)*6144+4096+21:(i-1)*6144+4096+2020)];
+%         DataCh78 = [DataCh78;data1((i-1)*8192+6144+21:(i-1)*8192+6144+2020)];
     end 
     
     DataCh12_IQ = reshape(DataCh12, 2, []);
     DataCh34_IQ = reshape(DataCh34, 2, []);
     DataCh56_IQ = reshape(DataCh56, 2, []);
+%     DataCh78_IQ = reshape(DataCh78, 2, []);
     DataCh12_IQ = DataCh12_IQ(1,:) + 1j*DataCh12_IQ(2,:);
     DataCh34_IQ = DataCh34_IQ(1,:) + 1j*DataCh34_IQ(2,:);
     DataCh56_IQ = DataCh56_IQ(1,:) + 1j*DataCh56_IQ(2,:);
+%     DataCh12_IQ = DataCh12_IQ(2,:) + 1j*DataCh12_IQ(1,:);
+%     DataCh34_IQ = DataCh34_IQ(2,:) + 1j*DataCh34_IQ(1,:);
+%     DataCh56_IQ = DataCh56_IQ(2,:) + 1j*DataCh56_IQ(1,:);
+%     DataCh78_IQ = DataCh78_IQ(1,:) + 1j*DataCh78_IQ(2,:);
     DataCh12_IQ = reshape(DataCh12_IQ, 2, []);
     DataCh34_IQ = reshape(DataCh34_IQ, 2, []);
     DataCh56_IQ = reshape(DataCh56_IQ, 2, []);
+%     DataCh78_IQ = reshape(DataCh78_IQ, 2, []);
     Ch1_IQ = DataCh12_IQ(1,:);
     Ch2_IQ = DataCh12_IQ(2,:);
     Ch3_IQ = DataCh34_IQ(1,:);
     Ch4_IQ = DataCh34_IQ(2,:);
     Ch5_IQ = DataCh56_IQ(1,:);
     Ch6_IQ = DataCh56_IQ(2,:);
+%     Ch7_IQ = DataCh78_IQ(1,:);
+%     Ch8_IQ = DataCh78_IQ(2,:);
     
     IQData=zeros(TotalCh, length(Ch1_IQ));
 %     IQData(1,:) = Ch1_IQ;
@@ -84,6 +94,8 @@ function [Frame] = SpectrumReadData(Path)
     IQData(4,:) = Ch4_IQ - mean(Ch4_IQ);
     IQData(5,:) = Ch5_IQ - mean(Ch5_IQ);
     IQData(6,:) = Ch6_IQ - mean(Ch6_IQ);
+%     IQData(7,:) = Ch5_IQ - mean(Ch5_IQ);
+%     IQData(8,:) = Ch6_IQ - mean(Ch6_IQ);
     DataFrame(1).IQData=IQData;
     Frame = DataFrame;
     fclose(fp);

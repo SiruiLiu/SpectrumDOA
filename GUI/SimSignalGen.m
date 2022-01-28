@@ -5,18 +5,18 @@ function [SimSignal] = SimSignalGen(SigNum, DOA,SigInfo,Snapshot, ChannelSNR, Ar
     SNRdB = SigInfo(:, 3);
     DOA = DOA*pi/180;
 
-    Sig = zeros(SigNum, 16368);
-    for i = 1:SigNum
-        Sig(i,:) = SignalGen(SigInfo(i, 1), SigInfo(i, 2), 'C');
-    end
+%     Sig = zeros(SigNum, 16368);
+%     for i = 1:SigNum
+%         Sig(i,:) = SignalGen(SigInfo(i, 1), SigInfo(i, 2), 'C');
+%     end
     
     Sig = zeros(SigNum, 16368);
     for i = 1:SigNum
-        Sig(i,:) = SignalGen(SigInfo(i, 1), SigInfo(i, 2), 'C');
+        Sig(i,:) = SignalGen(SigInfo(i, 1), SigInfo(i, 2), 'P');
         Sig(i,:) = awgn(Sig(i,:), SNRdB(i), 'measured');
     end
     Sig = Sig(:,1:Snapshot);
     [xs, xn] = arraydata(Sig, ChannelSNR, DOA, ArrayPos, Lambda);
-    SimSignal = xs;
+    SimSignal = xs+xn;
 end
 
