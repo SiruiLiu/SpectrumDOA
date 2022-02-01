@@ -48,8 +48,8 @@ function [signal_num] = MUSIC_Simulation(varargin)
         end
         
         for j = 1:element_num
-           [S, F, T] = spectrogram(CaliIQData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
-           [S_IQ] = spectrogram(IQData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
+           [S, F, T] = spectrogram(CaliIQData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
+           [S_IQ] = spectrogram(IQData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
            if(j==1)
                S1 = S;
                S_IQ1 = S_IQ;
@@ -94,9 +94,9 @@ function [signal_num] = MUSIC_Simulation(varargin)
             if(delay_point(i) == 0)
                 IQDataNew(i+1,:) = IQData(i+1, 1+LagPoint:end-AheadPoint);
             elseif(delay_point(i) < 0)
-                IQDataNew(i+1,:) = IQData(i+1, 1+CutPoint:end);
-            elseif(delay_point(i) > 0)
                 IQDataNew(i+1,:) = IQData(i+1, 1:end-CutPoint);
+            elseif(delay_point(i) > 0)
+                IQDataNew(i+1,:) = IQData(i+1, 1+CutPoint:end);
             end
         end
            
@@ -110,8 +110,8 @@ function [signal_num] = MUSIC_Simulation(varargin)
             imagesc(F, T, fftshift(db(abs(S.')), 2));
         elseif(strcmp(Filter, 'CutOff'))
             IQFFTResult = fft(IQDataNew, FFT_NUM_LONG, 2);
-            CutPoint1 = 0.5*length(IQFFTResult(1,:))+round(0.3e6/9.6e6*length(IQFFTResult(1,:)));
-            CutPoint2 = 0.5*length(IQFFTResult(1,:))-round(0.3e6/9.6e6*length(IQFFTResult(1,:)));
+            CutPoint1 = 0.5*length(IQFFTResult(1,:))+round(0.3e6/Fs*length(IQFFTResult(1,:)));
+            CutPoint2 = 0.5*length(IQFFTResult(1,:))-round(0.3e6/Fs*length(IQFFTResult(1,:)));
             IQFFTResult(:,1:CutPoint2) = 0;
             IQFFTResult(:,CutPoint1:end) = 0;
             IQDataFiltered = ifft(IQFFTResult, FFT_NUM_LONG, 2);
@@ -125,6 +125,20 @@ function [signal_num] = MUSIC_Simulation(varargin)
     CaliArray = ones(size(IQDataFiltered,1)-1, size(IQDataFiltered, 2));
     CaliArray = CaliArray.*exp(1j*PhaseDiff).';
     IQData_Calibrated =  [IQDataFiltered(1,:); IQDataFiltered(2:end,:).*conj(CaliArray)];
+
+    %% Check if the calibration is correct
+    for j = 1:element_num
+       [S_IQ] = spectrogram(IQDataNew(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
+       if(j==1)
+           S_IQ1 = S_IQ;
+       end
+       if(j > 1)
+            figure(5000)
+            subplot(1, element_num-1, j-1);
+            imagesc(F, T, fftshift(angle(S_IQ.'.*conj(S_IQ1.')),2));
+            title('校正后IQ数据相位差');
+       end
+    end
     
     %% Source number estimation
     if(nargin <= 5)
