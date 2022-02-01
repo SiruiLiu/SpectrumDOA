@@ -48,7 +48,7 @@ function [signal_num] = MUSIC_Simulation(varargin)
         end
         
         for j = 1:element_num
-           [S, F, T] = spectrogram(SampledData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
+           [S, F, T] = spectrogram(CaliIQData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
            [S_IQ] = spectrogram(IQData(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
            if(j==1)
                S1 = S;
@@ -86,24 +86,30 @@ function [signal_num] = MUSIC_Simulation(varargin)
         end
         % Time delay calibration
         CutPoint = max(delay_point) - min(delay_point);
+        LagPoint = abs(min(delay_point));
+        AheadPoint = max(delay_point);
         IQDataNew = zeros(element_num, length(IQData(1,:))-CutPoint);
-        IQDataNew(1,:) = IQData(1,end-CutPoint);
-        
-        PhaseDiff = angle(CorrespondValue(2:end).*conj(CorrespondValue(1))); % Calculate phase difference
-        CaliArray = ones(size(IQData,1)-1, size(IQData, 2));
-        CaliArray = CaliArray.*exp(1j*PhaseDiff).';
-        IQData = [IQDataFiltered(1,:);IQDataFiltered(2:end,:).*conj(CaliArray)];
-        
+        IQDataNew(1,:) = IQData(1, 1+LagPoint:end-AheadPoint);
+        for i = 1:length(delay_point)
+            if(delay_point(i) == 0)
+                IQDataNew(i+1,:) = IQData(i+1, 1+LagPoint:end-AheadPoint);
+            elseif(delay_point(i) < 0)
+                IQDataNew(i+1,:) = IQData(i+1, 1+CutPoint:end);
+            elseif(delay_point(i) > 0)
+                IQDataNew(i+1,:) = IQData(i+1, 1:end-CutPoint);
+            end
+        end
+           
         %% IQ Data filtering
         if(strcmp(Filter, 'AddFilter'))
-            Coe1tmp = load('F:\MATLAB\¿Õ¼äÆ×\GUI\FilterCOE\Coe.mat'); % Loapass filter coefficients stored in .mat file
+            Coe1tmp = load('..\FilterCOE\Coe.mat'); % Loapass filter coefficients stored in .mat file
             coe1 = Coe1tmp.coe;
-            IQDataFiltered = filter(coe1, 1, IQData, [], 2);
+            IQDataFiltered = filter(coe1, 1, IQDataNew, [], 2);
             figure(1004);
             [S, F, T] = spectrogram(IQDataFiltered(1,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
             imagesc(F, T, fftshift(db(abs(S.')), 2));
         elseif(strcmp(Filter, 'CutOff'))
-            IQFFTResult = fft(IQData, FFT_NUM_LONG, 2);
+            IQFFTResult = fft(IQDataNew, FFT_NUM_LONG, 2);
             CutPoint1 = 0.5*length(IQFFTResult(1,:))+round(0.3e6/9.6e6*length(IQFFTResult(1,:)));
             CutPoint2 = 0.5*length(IQFFTResult(1,:))-round(0.3e6/9.6e6*length(IQFFTResult(1,:)));
             IQFFTResult(:,1:CutPoint2) = 0;
@@ -112,19 +118,21 @@ function [signal_num] = MUSIC_Simulation(varargin)
             figure(1004);
             [S, F, T] = spectrogram(IQDataFiltered(1,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
             imagesc(F, T, fftshift(db(abs(S.')), 2));
-        end
-      
+        end    
     else
         IQData = SampledData;
     end
+    CaliArray = ones(size(IQDataFiltered,1)-1, size(IQDataFiltered, 2));
+    CaliArray = CaliArray.*exp(1j*PhaseDiff).';
+    IQData_Calibrated =  [IQDataFiltered(1,:); IQDataFiltered(2:end,:).*conj(CaliArray)];
     
     %% Source number estimation
     if(nargin <= 5)
-        signal_num = SourceEst(IQData);
+        signal_num = SourceEst(IQData_Calibrated);
     end
     
     %% MUSIC Core algorithm
-    Covariance = IQData*IQData'./size(IQData, 2);
+    Covariance = IQData_Calibrated*IQData_Calibrated'./size(IQData_Calibrated, 2);
     [O, ~] = eig(Covariance); 
     O = O(1:element_num, 1:element_num);
 
