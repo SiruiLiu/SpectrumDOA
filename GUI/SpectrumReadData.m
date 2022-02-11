@@ -4,6 +4,8 @@ function [Frame] = SpectrumReadData(Path)
     FFT_NUM = 1024;
     ShortDataPerFrame = 512*4; %按照short类型采集，512个DWORD相当于512*4个DBYTE
     
+    squence = [2,1,4,3,6,5,8,7];
+    
     fp = fopen(Path);
 
     DataTmp = fread(fp, [1,4], 'int32');
@@ -50,10 +52,14 @@ function [Frame] = SpectrumReadData(Path)
         %根据FPGA方面反馈，IQ数据共占用500个DWORD，故通道1数据相对帧起始位置偏移500*4+21-1=2020个点，从协
         %议上也能看出。
         %每两个通道按4帧循环，故每两个通道两组数据之间共间隔512DWOR*4*4=2048short*4=8192short个点的数据。
-        DataCh12 = [DataCh12;data1((i-1)*6144+21:(i-1)*6144+2020)];
         %通道2~3相对于通道1~2偏移512WORD*4=2048个short类型数据。
+        DataCh12 = [DataCh12;data1((i-1)*6144+21:(i-1)*6144+2020)];
         DataCh34 = [DataCh34;data1((i-1)*6144+2048+21:(i-1)*6144+2048+2020)];
         DataCh56 = [DataCh56;data1((i-1)*6144+4096+21:(i-1)*6144+4096+2020)];
+        
+%         DataCh12 = [DataCh12;data1((i-1)*8192+21:(i-1)*8192+2020)];
+%         DataCh34 = [DataCh34;data1((i-1)*8192+2048+21:(i-1)*8192+2048+2020)];
+%         DataCh56 = [DataCh56;data1((i-1)*8192+4096+21:(i-1)*8192+4096+2020)];
 %         DataCh78 = [DataCh78;data1((i-1)*8192+6144+21:(i-1)*8192+6144+2020)];
     end 
     
@@ -64,9 +70,6 @@ function [Frame] = SpectrumReadData(Path)
     DataCh12_IQ = DataCh12_IQ(1,:) + 1j*DataCh12_IQ(2,:);
     DataCh34_IQ = DataCh34_IQ(1,:) + 1j*DataCh34_IQ(2,:);
     DataCh56_IQ = DataCh56_IQ(1,:) + 1j*DataCh56_IQ(2,:);
-%     DataCh12_IQ = DataCh12_IQ(2,:) + 1j*DataCh12_IQ(1,:);
-%     DataCh34_IQ = DataCh34_IQ(2,:) + 1j*DataCh34_IQ(1,:);
-%     DataCh56_IQ = DataCh56_IQ(2,:) + 1j*DataCh56_IQ(1,:);
 %     DataCh78_IQ = DataCh78_IQ(1,:) + 1j*DataCh78_IQ(2,:);
     DataCh12_IQ = reshape(DataCh12_IQ, 2, []);
     DataCh34_IQ = reshape(DataCh34_IQ, 2, []);
@@ -82,30 +85,17 @@ function [Frame] = SpectrumReadData(Path)
 %     Ch8_IQ = DataCh78_IQ(2,:);
     
     IQData=zeros(TotalCh, length(Ch1_IQ));
-%     IQData(1,:) = Ch1_IQ;
-%     IQData(2,:) = Ch2_IQ;
-%     IQData(3,:) = Ch3_IQ;
-%     IQData(4,:) = Ch4_IQ;
-%     IQData(5,:) = Ch5_IQ;
-%     IQData(6,:) = Ch6_IQ;
-    IQData(1,:) = Ch1_IQ - mean(Ch1_IQ);
-    IQData(2,:) = Ch2_IQ - mean(Ch2_IQ);
-    IQData(3,:) = Ch3_IQ - mean(Ch3_IQ);
-    IQData(4,:) = Ch4_IQ - mean(Ch4_IQ);
-    IQData(5,:) = Ch5_IQ - mean(Ch5_IQ);
-    IQData(6,:) = Ch6_IQ - mean(Ch6_IQ);
-%     IQData(7,:) = Ch5_IQ - mean(Ch5_IQ);
-%     IQData(8,:) = Ch6_IQ - mean(Ch6_IQ);
+    IQData(squence(1),:) = Ch1_IQ - mean(Ch1_IQ);
+    IQData(squence(2),:) = Ch2_IQ - mean(Ch2_IQ);
+    IQData(squence(3),:) = Ch3_IQ - mean(Ch3_IQ);
+    IQData(squence(4),:) = Ch4_IQ - mean(Ch4_IQ);
+    IQData(squence(5),:) = Ch5_IQ - mean(Ch5_IQ);
+    IQData(squence(6),:) = Ch6_IQ - mean(Ch6_IQ);
+%     IQData(squence(7),:) = Ch5_IQ - mean(Ch5_IQ);
+%     IQData(squence(8),:) = Ch6_IQ - mean(Ch6_IQ);
     DataFrame(1).IQData=IQData;
     Frame = DataFrame;
     fclose(fp);
     
-%     figure;
-%     for i = 1:TotalCh
-%        [S, F, T] = spectrogram(IQData(i,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 153.6e6);
-%        subplot(1, TotalCh, i);
-%        imagesc(F, T, db(abs(S.')));
-%     end
-
 end
 

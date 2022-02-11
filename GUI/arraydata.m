@@ -16,7 +16,7 @@ err = 10.^(delta_gain/10).*exp(1i*pi*delta_phase./180);
 
 %================================================================================
 UintVector(1:Jamnum,:) = [sin(doa(:,1)).*cos(doa(:,2)),sin(doa(:,1)).*sin(doa(:,2)),cos(doa(:,1))];  % 干扰及信号方向向量
-SteeringVector = exp(1i*2*pi/lambda*coordinate_music*UintVector');                                 % 干扰及信号导向矢量
+SteeringVector = exp(-1i*2*pi/lambda*coordinate_music*UintVector');                                 % 干扰及信号导向矢量
 
 xs = zeros(elementnum,N);
 for i = 1:Jamnum

@@ -18,11 +18,12 @@ function [signal_num] = MUSIC_Simulation(varargin)
     end
     
     %% 参数设置
-    FFT_NUM = 512;
+    FFT_NUM = 256;
     FFT_NUM_LONG = 65536;
     d1 = figure(1001);
     d2 = figure(1002);
     d3 = figure(2000);
+    d4 = figure(2001);
     FreqDiff = 4.7e6;
     Fs = 9.6e6;
     element_num = length(SampledData(:,1));
@@ -73,34 +74,42 @@ function [signal_num] = MUSIC_Simulation(varargin)
         % Use the phase of maximum point as channel phase
         % For the current system, each ADC may exists an uncertain delay, this
         % time delay must be calibrated.
-        FFTResult = fft(CaliIQData, FFT_NUM_LONG, 2);
-        Prod = FFTResult(2:end,:).*conj(FFTResult(1,:));
-        gcc = ifft(Prod, FFT_NUM_LONG, 2);
-        gcc_amp = abs(gcc);
-        [~, p] = max(gcc_amp, [], 2);
-        delay_point = p - 1;
-        % Calculates phase difference.
+        % ---------------------------------------------------
+        [CaliNew, IQDataNew] = DataCalibration(CaliIQData, IQData);
+        
+       %% Check if the calibration is correct
+        for j = 1:element_num
+           [S, F, T] = spectrogram(CaliNew(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
+           [S_IQ] = spectrogram(IQDataNew(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
+           if(j==1)
+               S1 = S;
+               S_IQ1 = S_IQ;
+           end
+           figure(d1);
+           subplot(2, element_num, j+element_num);
+           imagesc(F, T, fftshift(db(abs(S.')), 2));
+           if(j > 1)
+                figure(d2)
+                subplot(1, element_num-1, j-1);
+                imagesc(F, T, fftshift(angle(S.'.*conj(S1.')),2));
+                title('延时校正后数据相位差');
+                figure(d3)
+                subplot(1, element_num-1, j-1);
+                imagesc(F, T, fftshift(angle(S_IQ.'.*conj(S_IQ1.')),2));
+                title('延时校正后IQ数据相位差');
+           end
+        end
+                        
+       %% Calculates phase difference.
+        CaliFFTResult = fft(CaliNew, 32768, 2);
+        CaliFreqSpec = db(abs(CaliFFTResult));
+        [~, p] = max(CaliFreqSpec, [], 2);
         PhaseDiff = zeros(1, element_num - 1);
         for i = 1:element_num -1
-            PhaseDiff(i) = angle(gcc(i, p(i)));
-        end
-        % Time delay calibration
-        CutPoint = max(delay_point) - min(delay_point);
-        LagPoint = abs(min(delay_point));
-        AheadPoint = max(delay_point);
-        IQDataNew = zeros(element_num, length(IQData(1,:))-CutPoint);
-        IQDataNew(1,:) = IQData(1, 1+LagPoint:end-AheadPoint);
-        for i = 1:length(delay_point)
-            if(delay_point(i) == 0)
-                IQDataNew(i+1,:) = IQData(i+1, 1+LagPoint:end-AheadPoint);
-            elseif(delay_point(i) < 0)
-                IQDataNew(i+1,:) = IQData(i+1, 1:end-CutPoint);
-            elseif(delay_point(i) > 0)
-                IQDataNew(i+1,:) = IQData(i+1, 1+CutPoint:end);
-            end
+            PhaseDiff(i) = angle(CaliFFTResult(i+1, p(i+1))*conj(CaliFFTResult(1, p(1))));
         end
            
-        %% IQ Data filtering
+       %% IQ Data filtering
         if(strcmp(Filter, 'AddFilter'))
             Coe1tmp = load('..\FilterCOE\Coe.mat'); % Loapass filter coefficients stored in .mat file
             coe1 = Coe1tmp.coe;
@@ -110,33 +119,33 @@ function [signal_num] = MUSIC_Simulation(varargin)
             imagesc(F, T, fftshift(db(abs(S.')), 2));
         elseif(strcmp(Filter, 'CutOff'))
             IQFFTResult = fft(IQDataNew, FFT_NUM_LONG, 2);
-            CutPoint1 = 0.5*length(IQFFTResult(1,:))+round(0.3e6/Fs*length(IQFFTResult(1,:)));
-            CutPoint2 = 0.5*length(IQFFTResult(1,:))-round(0.3e6/Fs*length(IQFFTResult(1,:)));
+            CutPoint1 = 0.5*length(IQFFTResult(1,:))+round((2.8e6+0.15e6)/Fs*length(IQFFTResult(1,:)));
+            CutPoint2 = 0.5*length(IQFFTResult(1,:))+round((2.8e6-0.15e6)/Fs*length(IQFFTResult(1,:)));
             IQFFTResult(:,1:CutPoint2) = 0;
             IQFFTResult(:,CutPoint1:end) = 0;
             IQDataFiltered = ifft(IQFFTResult, FFT_NUM_LONG, 2);
             figure(1004);
             [S, F, T] = spectrogram(IQDataFiltered(1,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
             imagesc(F, T, fftshift(db(abs(S.')), 2));
+        else
+            IQDataFiltered = IQDataNew;
         end    
+        
+        IQData_Calibrated = PhaseCalibration(IQDataFiltered, PhaseDiff);
     else
-        IQData = SampledData;
+        IQData_Calibrated = SampledData;
     end
-    CaliArray = ones(size(IQDataFiltered,1)-1, size(IQDataFiltered, 2));
-    CaliArray = CaliArray.*exp(1j*PhaseDiff).';
-    IQData_Calibrated =  [IQDataFiltered(1,:); IQDataFiltered(2:end,:).*conj(CaliArray)];
-
-    %% Check if the calibration is correct
+    
     for j = 1:element_num
-       [S_IQ] = spectrogram(IQDataNew(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
+       [S_IQ] = spectrogram(IQData_Calibrated(j,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, Fs);
        if(j==1)
            S_IQ1 = S_IQ;
        end
        if(j > 1)
-            figure(5000)
+            figure(d4)
             subplot(1, element_num-1, j-1);
             imagesc(F, T, fftshift(angle(S_IQ.'.*conj(S_IQ1.')),2));
-            title('校正后IQ数据相位差');
+            title('IQ数据相位差');
        end
     end
     
@@ -148,7 +157,7 @@ function [signal_num] = MUSIC_Simulation(varargin)
     %% MUSIC Core algorithm
     Covariance = IQData_Calibrated*IQData_Calibrated'./size(IQData_Calibrated, 2);
     [O, ~] = eig(Covariance); 
-    O = O(1:element_num, 1:element_num);
+    O = O(1:element_num, 1:element_num);        
 
     % 谱峰搜索
     UU=O(:,1:element_num-(signal_num));
@@ -156,7 +165,7 @@ function [signal_num] = MUSIC_Simulation(varargin)
     for i = 1:length(theta)
         for j = 1:length(phi)
             unit = [sin(theta(i))*cos(phi(j)),sin(theta(i))*sin(phi(j)),cos(theta(i))];
-            SteeringVector = exp(1i*2*pi/Lambda*Position*unit');
+            SteeringVector = exp(-1i*2*pi/Lambda*Position*unit');
             WW = SteeringVector'*(UU*UU')*SteeringVector;
             Pmusic(i,j) = abs(1/WW);
         end
@@ -180,6 +189,8 @@ function [signal_num] = MUSIC_Simulation(varargin)
     
     figure(103)   % 三维视图
     meshc(sin(theta)'*cos(phi),sin(theta)'*sin(phi),Pmusic);
+    
+    [Theroy, Real] = PhaseDiff_Verify([90, 0], IQData_Calibrated, Lambda, Position);
 end
 
 function [Covariance] = Toeplitz(SigArray)
@@ -208,3 +219,70 @@ function [Covariance] =  MMusic(OriginalCovariance)
     Covariance = OriginalCovariance + J*((OriginalCovariance)^-1*det(OriginalCovariance))*J;
 end
 
+function [PhaseDiff] = CalPhaseDiff(IQData)
+    global FFT_NUM_LONG;
+    FFTResult = fft(IQData, FFT_NUM_LONG, 2);
+    ampFFTResult = abs(FFTResult);
+    [~, p] = max(ampFFTResult, [], 2);
+    PhaseDiff = zeros(1, size(IQData, 1));
+    for i = 1:size(IQData, 1)-1
+        PhaseDiff(i) = angle(FFTResult(i+1, p(i+1))*conj(FFTResult(1, p(1))));
+    end
+end
+
+function [Calibrated] = PhaseCalibration(OriginData, PhaseDiff)
+    CaliArray = ones(size(OriginData,1)-1, size(OriginData, 2));
+    CaliArray = CaliArray.*exp(1j*PhaseDiff).';
+    Calibrated =  [OriginData(1,:); OriginData(2:end,:).*conj(CaliArray)];
+end
+
+function [PhaseDiff_Theory, PhaseDiff_RealData] = PhaseDiff_Verify(Ang, RealData, Lambda, Position)
+    Radius = Ang*pi/180;
+    unit = [sin(Radius(1))*cos(Radius(2)),sin(Radius(1))*sin(Radius(2)),cos(Radius(1))];
+    SteeringVector = exp(1i*2*pi/Lambda*Position*unit');
+    PhaseDiff_Theory = zeros(1, size(RealData, 1) - 1);
+    for i = 1:size(RealData, 1)-1
+        PhaseDiff_Theory(i) = angle(SteeringVector(i+1)*conj(SteeringVector(1)));
+    end
+    PhaseDiff_RealData = CalPhaseDiff(RealData);
+end
+
+% --Devide data stream into calibration data and iq data
+function [CaliData, IQData] = Devide(DataStream, CaliStart, CaliStop, IQStart)
+    CaliData = DataStream(:, CaliStart:CaliStop);
+    IQData = DataStream(:, IQStart:end);
+end
+
+% --Calibration time delay for both calibration data and iq data
+function [CaliData_Calibrated, IQData_Calibrated] = DataCalibration(CaliData, IQData)
+    global FFT_NUM_LONG;
+    FFTResult = fft(CaliData, FFT_NUM_LONG, 2);
+    Prod = FFTResult(2:end,:).*conj(FFTResult(1,:));
+    gcc = ifft(Prod, FFT_NUM_LONG, 2);
+    gcc_amp = abs(gcc);
+    [~, p] = max(gcc_amp, [], 2);
+    delay_point = p - 1;
+    CaliData_Calibrated = TimeDelayCalibration(CaliData, delay_point);
+    IQData_Calibrated = TimeDelayCalibration(IQData, delay_point);
+end
+
+% --Time delay calibration function
+function [DataCalibrated] = TimeDelayCalibration(Data, delay_point)
+    if(size(Data, 1)-1 ~= length(delay_point))
+        error('Channel number and delay point number are mismatch');
+    end
+    CutPoint = max(delay_point) - min(delay_point);
+    LagPoint = abs(min(delay_point));
+    AheadPoint = max(delay_point);
+    DataCalibrated = zeros(size(Data, 1), length(Data(1,:))-CutPoint);
+    DataCalibrated(1,:) = Data(1, 1+LagPoint:end-AheadPoint);
+    for i = 1:length(delay_point)
+        if(delay_point(i) == 0)
+            DataCalibrated(i+1,:) = Data(i+1, 1+LagPoint:end-AheadPoint);
+        elseif(delay_point(i) < 0)
+            DataCalibrated(i+1,:) = Data(i+1, 1:end-CutPoint);
+        elseif(delay_point(i) > 0)
+            DataCalibrated(i+1,:) = Data(i+1, 1+CutPoint:end);
+        end
+    end
+end

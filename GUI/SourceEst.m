@@ -1,6 +1,6 @@
 function [SourceNum] = SourceEst(IQData)
     Rx = IQData*IQData'./size(IQData, 2);
-    [V, D] = eig(Rx);
+    [~, D] = eig(Rx);
     Ds = diag(D);
     Factor = 0.5*(Ds(1)+Ds(2)).*eye(size(Rx));
     Rx_new = Rx - Factor;
