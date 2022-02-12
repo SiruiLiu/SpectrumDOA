@@ -43,6 +43,7 @@ CaliLen_start = 1;
 CaliLen_stop = 0.1;
 IQData_Start = 0.5;
 
+Diag1 = figure(1);
 %% ================Visit data file directory===========
 FilePath = uigetdir('F:\SpectrumDOA\SimData\', 'Select a directory');
 FileInfo = dir(fullfile(FilePath));
@@ -60,12 +61,23 @@ for i = 1:length(FileInfo)
         Frame = SpectrumReadData(Path);
         [CaliData, IQData] = Devide(Frame.IQData, CaliLen_start, size(Frame.IQData, 2)*CaliLen_stop, size(Frame.IQData, 2)*IQData_Start);
         [CaliDataNew, IQDataNew] = DataCalibration(CaliData, IQData);
-        PhaseDiff(:,k) = CalResidual(IQDataNew, CaliDataNew, Angle);
+%         PhaseDiff(:,k) = CalResidual(IQDataNew, CaliDataNew, Angle);
+        IQPhase = CalPhase(IQDataNew);
+        SteeringVec = CalTheoryPhase(Angle, Position);
+        Tmp = IQPhase.*conj(SteeringVec);
+        StVec(:,k) = SteeringVec;
+        PhaseDiff12(k) = angle(Tmp(2)*conj(Tmp(1)));
         k = k+1;
     end
 end
-
-
+figure(Diag1);
+plot(PhaseDiff12);
+set(gca, 'xticklabel', [0, 15, 30, 45, 60, 75 ,90]);
+hold on;
+plot(angle(StVec(1,:)));
+plot(angle(StVec(2,:)));
+legend('通道1与通道2相位差','通道1导向矢量','通道2导向矢量');
+hold off;
 %% ========================Functions declared and described below =====================
 % --Calculates theroy and real phase difference between channel 1 and
 % --other channels
