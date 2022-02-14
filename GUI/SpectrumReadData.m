@@ -1,5 +1,5 @@
 function [Frame] = SpectrumReadData(Path)
-    TotalCh = 6; %共6通道
+    TotalCh = 8; %共6通道
     FrameCh = 2; %每帧含2通道数据
     FFT_NUM = 1024;
     ShortDataPerFrame = 512*4; %按照short类型采集，512个DWORD相当于512*4个DBYTE
@@ -53,36 +53,36 @@ function [Frame] = SpectrumReadData(Path)
         %议上也能看出。
         %每两个通道按4帧循环，故每两个通道两组数据之间共间隔512DWOR*4*4=2048short*4=8192short个点的数据。
         %通道2~3相对于通道1~2偏移512WORD*4=2048个short类型数据。
-        DataCh12 = [DataCh12;data1((i-1)*6144+21:(i-1)*6144+2020)];
-        DataCh34 = [DataCh34;data1((i-1)*6144+2048+21:(i-1)*6144+2048+2020)];
-        DataCh56 = [DataCh56;data1((i-1)*6144+4096+21:(i-1)*6144+4096+2020)];
+%         DataCh12 = [DataCh12;data1((i-1)*6144+21:(i-1)*6144+2020)];
+%         DataCh34 = [DataCh34;data1((i-1)*6144+2048+21:(i-1)*6144+2048+2020)];
+%         DataCh56 = [DataCh56;data1((i-1)*6144+4096+21:(i-1)*6144+4096+2020)];
         
-%         DataCh12 = [DataCh12;data1((i-1)*8192+21:(i-1)*8192+2020)];
-%         DataCh34 = [DataCh34;data1((i-1)*8192+2048+21:(i-1)*8192+2048+2020)];
-%         DataCh56 = [DataCh56;data1((i-1)*8192+4096+21:(i-1)*8192+4096+2020)];
-%         DataCh78 = [DataCh78;data1((i-1)*8192+6144+21:(i-1)*8192+6144+2020)];
+        DataCh12 = [DataCh12;data1((i-1)*8192+21:(i-1)*8192+2020)];
+        DataCh34 = [DataCh34;data1((i-1)*8192+2048+21:(i-1)*8192+2048+2020)];
+        DataCh56 = [DataCh56;data1((i-1)*8192+4096+21:(i-1)*8192+4096+2020)];
+        DataCh78 = [DataCh78;data1((i-1)*8192+6144+21:(i-1)*8192+6144+2020)];
     end 
     
     DataCh12_IQ = reshape(DataCh12, 2, []);
     DataCh34_IQ = reshape(DataCh34, 2, []);
     DataCh56_IQ = reshape(DataCh56, 2, []);
-%     DataCh78_IQ = reshape(DataCh78, 2, []);
+    DataCh78_IQ = reshape(DataCh78, 2, []);
     DataCh12_IQ = DataCh12_IQ(1,:) + 1j*DataCh12_IQ(2,:);
     DataCh34_IQ = DataCh34_IQ(1,:) + 1j*DataCh34_IQ(2,:);
     DataCh56_IQ = DataCh56_IQ(1,:) + 1j*DataCh56_IQ(2,:);
-%     DataCh78_IQ = DataCh78_IQ(1,:) + 1j*DataCh78_IQ(2,:);
+    DataCh78_IQ = DataCh78_IQ(1,:) + 1j*DataCh78_IQ(2,:);
     DataCh12_IQ = reshape(DataCh12_IQ, 2, []);
     DataCh34_IQ = reshape(DataCh34_IQ, 2, []);
     DataCh56_IQ = reshape(DataCh56_IQ, 2, []);
-%     DataCh78_IQ = reshape(DataCh78_IQ, 2, []);
+    DataCh78_IQ = reshape(DataCh78_IQ, 2, []);
     Ch1_IQ = DataCh12_IQ(1,:);
     Ch2_IQ = DataCh12_IQ(2,:);
     Ch3_IQ = DataCh34_IQ(1,:);
     Ch4_IQ = DataCh34_IQ(2,:);
     Ch5_IQ = DataCh56_IQ(1,:);
     Ch6_IQ = DataCh56_IQ(2,:);
-%     Ch7_IQ = DataCh78_IQ(1,:);
-%     Ch8_IQ = DataCh78_IQ(2,:);
+    Ch7_IQ = DataCh78_IQ(1,:);
+    Ch8_IQ = DataCh78_IQ(2,:);
     
     IQData=zeros(TotalCh, length(Ch1_IQ));
     IQData(squence(1),:) = Ch1_IQ - mean(Ch1_IQ);
@@ -91,8 +91,8 @@ function [Frame] = SpectrumReadData(Path)
     IQData(squence(4),:) = Ch4_IQ - mean(Ch4_IQ);
     IQData(squence(5),:) = Ch5_IQ - mean(Ch5_IQ);
     IQData(squence(6),:) = Ch6_IQ - mean(Ch6_IQ);
-%     IQData(squence(7),:) = Ch5_IQ - mean(Ch5_IQ);
-%     IQData(squence(8),:) = Ch6_IQ - mean(Ch6_IQ);
+    IQData(squence(7),:) = Ch5_IQ - mean(Ch5_IQ);
+    IQData(squence(8),:) = Ch6_IQ - mean(Ch6_IQ);
     DataFrame(1).IQData=IQData;
     Frame = DataFrame;
     fclose(fp);

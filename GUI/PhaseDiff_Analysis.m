@@ -29,13 +29,13 @@ Position = PositionStd(1:ChannelNum, :);
 Height = 1.1;
 Dist = 16;
 % Angle = [atan(Dist/Height)*180/pi, 360-135];
-Ang  = [90, 0;
-        90, 360-15;
-        90, 360-30;
-        90, 360-45;
-        90, 360-60;
-        90, 360-75;
-        90, 360-90];
+Ang  = [90, 180;
+        90, 180-15;
+        90, 180-30;
+        90, 180-45;
+        90, 180-60;
+        90, 180-75;
+        90, 180-90];
 
 % Calibration data and IQData a construct in one data stream, use the 
 % parameters below to devide them
