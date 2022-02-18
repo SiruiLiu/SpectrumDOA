@@ -68,13 +68,17 @@ for i = 1:length(FileInfo)
         Frame = SpectrumReadData(Path);
         [CaliData, IQData] = Devide(Frame.IQData, CaliLen_start, size(Frame.IQData, 2)*CaliLen_stop, size(Frame.IQData, 2)*IQData_Start);
         [CaliDataNew, IQDataNew] = DataCalibration(CaliData, IQData);
-         Paintting(Frame.IQData, CaliDataNew, IQDataNew, Fs);
+%         Paintting(Frame.IQData, CaliDataNew, IQDataNew, Fs);
+        PhaseDiff(:,k) = CalResidual(IQDataNew, CaliDataNew, Angle);
         IQPhase = CalPhase(IQDataNew);
+        CaliPhase = CalPhase(CaliDataNew);
         CaliPhaseDiff = Cal_CaliPhaseDiff(CaliDataNew);
         SteeringVec = CalTheoryPhase(Angle, Position);
         Tmp = IQPhase.*conj(SteeringVec).*conj(CaliPhaseDiff);
-        PhaseDiff(:,k) = unwrap(angle(Tmp.*conj(Tmp(3))));
-        CaliPhaseDiff_Radius(:,k) = unwrap(angle(CaliPhaseDiff));
+%         Tmp = IQPhase;
+        Var(k) = 2*pi*sind(Angle(2)+22.5)/Lambda;
+        PhaseDiff(:,k) = unwrap(angle(Tmp.*conj(Tmp(1))));
+        CaliPhaseDiff_Radius(:,k) = angle(CaliPhaseDiff);
         k = k+1;
 %         PhaseDiff(:,k) = unwrap(CalResidual(IQDataNew, CaliDataNew, Angle));
 %         k = k+1;
@@ -97,8 +101,8 @@ for i = 1:size(CaliPhaseDiff_Radius, 1)
     hold on;
 end
 set(gca, 'xticklabel', [0, 15, 30, 45, 60, 75 ,90]);
-legend('通道1与通道1校正相位差','通道2与通道1校正相位差','通道3与通道1校正相位差', ...
-       '通道4与通道1校正相位差','通道5与通道1校正相位差','通道6与通道1校正相位差');
+legend('通道1与通道1相位差','通道2与通道1相位差','通道3与通道1相位差', ...
+       '通道4与通道1相位差','通道5与通道1相位差','通道6与通道1相位差');
 hold off;
 
 % figure(Diag5);
@@ -297,23 +301,26 @@ function [PhaseDiff] = CalResidual(IQData, CaliData, Ang)
     global Position;
     SteeringVec = CalTheoryPhase(Ang, Position);
     IQPhase = CalPhase(IQData);
-    CaliPhase = Cal_CaliPhase1(CaliData);
+    CaliPhase = CalPhase(CaliData);
     PhaseDiff = angle(IQPhase.*conj(SteeringVec).*conj(CaliPhase));
     PhaseDiff = mod(PhaseDiff-PhaseDiff(1),2*pi);
 end
 
 function [CaliPhase] = Cal_CaliPhase1(CaliData)
-    global FFT_NUM_LONG;
-    FFTResult = fft(CaliData, FFT_NUM_LONG, 2);
-    PhaseDiff_Tmp = FFTResult.*conj(FFTResult(1,:));
-    CaliPhaseDiff = mean(PhaseDiff_Tmp.*abs(FFTResult), 2);
+    global FFT_NUM;
+    CaliPhase = zeros(size(CaliData, 1)-1, 1);
+    for i=1:size(CaliData, 1)
+        [S] = spectrogram(CaliData(i,:), hamming(FFT_NUM), FFT_NUM*0.5, FFT_NUM, 9.6e6);
+        Sum = sum(S.', 1);
+        Amp = abs(Sum);
+        [~, p] = max(Amp);
+        CaliPhase(i) = Sum(p);
+    end
 end
 
 function [CaliPhaseDiff] = Cal_CaliPhaseDiff(CaliData)
-%     Phase = CalPhase(CaliData);
-%     CaliPhaseDiff = Phase.*conj(Phase(1));
     global FFT_NUM_LONG;
     FFTResult = fft(CaliData, FFT_NUM_LONG, 2);
-    PhaseDiff_Tmp = FFTResult.*conj(FFTResult(3,:));
+    PhaseDiff_Tmp = FFTResult.*conj(FFTResult(1,:));
     CaliPhaseDiff = mean(PhaseDiff_Tmp.*abs(FFTResult), 2);
 end
