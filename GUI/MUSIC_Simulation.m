@@ -29,7 +29,7 @@ function [signal_num] = MUSIC_Simulation(varargin)
     element_num = length(SampledData(:,1));
     %% 切分数据 
     CaliLen_start = size(SampledData, 2)*0+1;
-    CaliLen_stop = size(SampledData, 2)*0.1;
+    CaliLen_stop = size(SampledData, 2)*0.07;
     IQData_Start = size(SampledData, 2)*0.5;
 
     angle_step = pi/180;       % 角度搜索步进 

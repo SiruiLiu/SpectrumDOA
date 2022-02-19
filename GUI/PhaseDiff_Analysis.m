@@ -29,7 +29,7 @@ loc_theta = loc_theta(:);
 r = 0.15;
 PositionStd=[r*cosd(loc_theta),r*sind(loc_theta),zeros(8,1)];
 
-ChannelNum = 6;
+ChannelNum = 8;
 Position = PositionStd(1:ChannelNum, :);
 Height = 1.1;
 Dist = 16;
@@ -45,7 +45,7 @@ Ang  = [90, 0;
 % Calibration data and IQData a construct in one data stream, use the 
 % parameters below to devide them
 CaliLen_start = 1;
-CaliLen_stop = 0.1;
+CaliLen_stop = 0.07;
 IQData_Start = 0.5;
 
 Diag4 = figure(1);
@@ -62,17 +62,19 @@ k = 1;
 for i = 1:length(FileInfo)
     Path_2nd = [FileInfo(i).folder, '\', FileInfo(i).name];
     FileInfo_2nd = dir(fullfile(Path_2nd, '*.dat'));
-    Angle = Ang(i,:);
+    Angle = Ang(1,:);
     for j = 1:length(FileInfo_2nd)
         Path = [FileInfo_2nd(j).folder, '\', FileInfo_2nd(j).name];
         Frame = SpectrumReadData(Path);
-        [CaliData, IQData] = Devide(Frame.IQData, CaliLen_start, size(Frame.IQData, 2)*CaliLen_stop, size(Frame.IQData, 2)*IQData_Start);
+        [CaliData, IQData] = Devide(Frame.IQData, CaliLen_start, ...
+                                    round(size(Frame.IQData, 2)*CaliLen_stop), ...
+                                    round(size(Frame.IQData, 2)*IQData_Start));
         [CaliDataNew, IQDataNew] = DataCalibration(CaliData, IQData);
-         Paintting(Frame.IQData, CaliDataNew, IQDataNew, Fs);
+%         Paintting(Frame.IQData, CaliDataNew, IQDataNew, Fs);
         IQPhase = CalPhase(IQDataNew);
         CaliPhaseDiff = Cal_CaliPhaseDiff(CaliDataNew);
         SteeringVec = CalTheoryPhase(Angle, Position);
-        Tmp = IQPhase.*conj(SteeringVec).*conj(CaliPhaseDiff);
+        Tmp = IQPhase.*conj(CaliPhaseDiff);
         PhaseDiff(:,k) = unwrap(angle(Tmp.*conj(Tmp(3))));
         CaliPhaseDiff_Radius(:,k) = unwrap(angle(CaliPhaseDiff));
         k = k+1;
@@ -91,15 +93,15 @@ legend('通道1与通道1相位差','通道2与通道1相位差','通道3与通�
        '通道4与通道1相位差','通道5与通道1相位差','通道6与通道1相位差');
 hold off;
 
-figure(Diag5);
-for i = 1:size(CaliPhaseDiff_Radius, 1)
-    plot(CaliPhaseDiff_Radius(i,:));
-    hold on;
-end
-set(gca, 'xticklabel', [0, 15, 30, 45, 60, 75 ,90]);
-legend('通道1与通道1校正相位差','通道2与通道1校正相位差','通道3与通道1校正相位差', ...
-       '通道4与通道1校正相位差','通道5与通道1校正相位差','通道6与通道1校正相位差');
-hold off;
+% figure(Diag5);
+% for i = 1:size(CaliPhaseDiff_Radius, 1)
+%     plot(CaliPhaseDiff_Radius(i,:));
+%     hold on;
+% end
+% set(gca, 'xticklabel', [0, 15, 30, 45, 60, 75 ,90]);
+% legend('通道1与通道1校正相位差','通道2与通道1校正相位差','通道3与通道1校正相位差', ...
+%        '通道4与通道1校正相位差','通道5与通道1校正相位差','通道6与通道1校正相位差');
+% hold off;
 
 % figure(Diag5);
 % for i = 1:size(PhaseDiff, 1)
