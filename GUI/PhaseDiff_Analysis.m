@@ -52,9 +52,9 @@ Diag4 = figure(1);
 Diag5 = figure(2);
 Diag6 = figure(3);
 %% ================Visit data file directory===========
-FilePath = uigetdir('F:\SpectrumDOA\SimData\', 'Select a directory');
+FilePath = uigetdir(' F:\SpectrumDOA\SimData\', 'Select a directory');
 FileInfo = dir(fullfile(FilePath));
-FileInfo = FileInfo(3:end);
+FileInfo = FileInfo(1:end-2);
 FileList = {FileInfo.name};
 %% ===============Comparing theory phase difference and real phase difference============
 Diff = zeros(length(FileList), ChannelNum-1);
@@ -70,7 +70,7 @@ for i = 1:length(FileInfo)
                                     round(size(Frame.IQData, 2)*CaliLen_stop), ...
                                     round(size(Frame.IQData, 2)*IQData_Start));
         [CaliDataNew, IQDataNew] = DataCalibration(CaliData, IQData);
-%         Paintting(Frame.IQData, CaliDataNew, IQDataNew, Fs);
+        Paintting(Frame.IQData, CaliData, IQData, Fs);
         IQPhase = CalPhase(IQDataNew);
         CaliPhaseDiff = Cal_CaliPhaseDiff(CaliDataNew);
         SteeringVec = CalTheoryPhase(Angle, Position);
