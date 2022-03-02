@@ -52,10 +52,14 @@ Diag4 = figure(1);
 Diag5 = figure(2);
 Diag6 = figure(3);
 %% ================Visit data file directory===========
-FilePath = uigetdir('F:\SpectrumDOA\SimData\', 'Select a directory');
+FilePath = uigetdir(' F:\SpectrumDOA\SimData\', 'Select a directory');
 FileInfo = dir(fullfile(FilePath));
+<<<<<<< HEAD
 FileInfo = FileInfo(3:end);
 % FileInfo = FileInfo(1);
+=======
+FileInfo = FileInfo(1:end-2);
+>>>>>>> f1d980215c20a5f682d736b7301e508888c8800a
 FileList = {FileInfo.name};
 %% ===============Comparing theory phase difference and real phase difference============
 Diff = zeros(length(FileList), ChannelNum-1);
@@ -72,10 +76,16 @@ for i = 1:length(FileInfo)
                                     round(size(Frame.IQData, 2)*CaliLen_stop), ...
                                     round(size(Frame.IQData, 2)*IQData_Start));
         [CaliDataNew, IQDataNew] = DataCalibration(CaliData, IQData);
+<<<<<<< HEAD
         [CaliData_Aligned, IQData_Aligned] = AccurateTDCalibration(CaliDataNew, IQDataNew, Fs, 100);
 %         Paintting(Frame.IQData, CaliData_Aligned, IQData_Aligned, Fs);
         IQPhase = CalPhase(IQData_Aligned);
         CaliPhaseDiff = Cal_CaliPhaseDiff(CaliData_Aligned);
+=======
+        Paintting(Frame.IQData, CaliData, IQData, Fs);
+        IQPhase = CalPhase(IQDataNew);
+        CaliPhaseDiff = Cal_CaliPhaseDiff(CaliDataNew);
+>>>>>>> f1d980215c20a5f682d736b7301e508888c8800a
         SteeringVec = CalTheoryPhase(Angle, Position);
         Tmp = IQPhase.*conj(CaliPhaseDiff);
         PhaseDiff(:,k) = angle(Tmp.*conj(Tmp(3)));
