@@ -48,7 +48,7 @@ for i = 1:length(FileInfo)
     File = [FileInfo(i).folder, '\', FileInfo(i).name];
     Data = SDRDataRead(File);
     [CaliDataNew, IQDataNew] = DataCalibration(Data, Data);
-%     Paintting(Data, Data, Data, Fs);
+    Paintting(Data, Data, Data, Fs);
     CaliPhaseDiff = Cal_CaliPhaseDiff(Data);
     CaliPhaseDiff_Radius(:,k) = unwrap(angle(CaliPhaseDiff));
     k = k+1;
