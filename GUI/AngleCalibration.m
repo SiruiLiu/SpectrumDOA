@@ -126,7 +126,7 @@ function [Phase_without_CaliPhase, IQPhase_without_CaliPhase, AngleStream, Lambd
                                      round(size(Frame.IQData, 2)*IQStart));
         [CaliData_Aligned, IQData_Aligned] = CalibrationProcess(CaliData, IQData, ...
                                                                 Fs, Mul);
-        Paintting(Frame.IQData, CaliData, IQData, Fs);
+%         Paintting(Frame.IQData, CaliData, IQData, Fs);
         IQPhase = CalPhase(IQData);
         AngleStream(i) = abs(Angle(1));
         for j = 1:round(0.5*size(Position, 1))
